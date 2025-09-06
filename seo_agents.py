@@ -21,21 +21,36 @@ class SEOAIAgent:
         self.model = "Qwen/Qwen2.5-VL-72B-Instruct"
     
     async def call_ai(self, system_prompt: str, user_content: str) -> str:
-        """调用AI API"""
+        """调用AI API - 带超时保护"""
         try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_content}
-                ],
-                temperature=0.7,
-                max_tokens=4000
+            # 添加超时保护，最多30秒
+            import asyncio
+            
+            def _sync_call():
+                return self.client.chat.completions.create(
+                    model=self.model,
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_content}
+                    ],
+                    temperature=0.7,
+                    max_tokens=2000,  # 减少token数量
+                    timeout=30  # 30秒超时
+                )
+            
+            # 使用asyncio超时保护
+            response = await asyncio.wait_for(
+                asyncio.to_thread(_sync_call), 
+                timeout=30
             )
             return response.choices[0].message.content
+            
+        except asyncio.TimeoutError:
+            print("⏰ AI调用超时(30s)，返回默认分析")
+            return "AI分析超时，使用基础分析模式。建议稍后重试。"
         except Exception as e:
             print(f"❌ AI调用失败: {e}")
-            return f"AI分析失败: {str(e)}"
+            return f"AI分析失败: {str(e)}，已切换到安全模式。"
 
 
 class SEODataAnalysisExpert(SEOAIAgent):

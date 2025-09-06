@@ -9,7 +9,11 @@
 *.sqlite
 *.sqlite3
 
-# Python
+# 日志文件
+*.log
+logs/
+
+# 缓存和临时文件
 __pycache__/
 *.py[cod]
 *$py.class
@@ -18,6 +22,24 @@ __pycache__/
 build/
 develop-eggs/
 dist/
+reports/
+
+# 测试文件
+test_*.py
+*_test.py
+emergency_*.py
+diagnose_*.py
+quick_*.py
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
 downloads/
 eggs/
 .eggs/

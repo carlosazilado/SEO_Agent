@@ -2,8 +2,11 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SEO分析报告 - SEO Agent Pro</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.                                                        <td>{{ result.result.raw_data.content_analysis.title or '无标题' }}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td><strong>描述:</strong></td>
+                                                        <td>{{ result.result.raw_data.content_analysis.description or '无描述' }}</td>    <title>SEO分析报告 - SEO Agent Pro</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="/static/style.css" rel="stylesheet">
@@ -104,23 +107,23 @@
                                 <table class="table table-sm">
                                     <tr>
                                         <td>标题长度</td>
-                                        <td>{{ result.result.raw_data.content_analysis.tdk.title_length or 0 }} 字符</td>
+                                        <td>{{ result.result.raw_data.content_analysis.title_length or 0 }} 字符</td>
                                     </tr>
                                     <tr>
                                         <td>描述长度</td>
-                                        <td>{{ result.result.raw_data.content_analysis.tdk.description_length or 0 }} 字符</td>
+                                        <td>{{ result.result.raw_data.content_analysis.description_length or 0 }} 字符</td>
                                     </tr>
                                     <tr>
                                         <td>H1标签</td>
-                                        <td>{{ result.result.raw_data.content_analysis.headings.h1|length }} 个</td>
+                                        <td>{{ result.result.raw_data.content_analysis.h1_count or 0 }} 个</td>
                                     </tr>
                                     <tr>
                                         <td>图片数量</td>
-                                        <td>{{ result.result.raw_data.content_analysis.images.total }} 个</td>
+                                        <td>{{ result.result.raw_data.content_analysis.image_count or 0 }} 个</td>
                                     </tr>
                                     <tr>
                                         <td>链接数量</td>
-                                        <td>{{ result.result.raw_data.content_analysis.links.internal + result.result.raw_data.content_analysis.links.external }} 个</td>
+                                        <td>{{ (result.result.raw_data.content_analysis.internal_links or 0) + (result.result.raw_data.content_analysis.external_links or 0) }} 个</td>
                                     </tr>
                                 </table>
                             </div>

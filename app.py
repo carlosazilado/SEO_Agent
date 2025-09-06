@@ -23,6 +23,7 @@ from seo_analyzer import EnhancedSEOAnalyzer, BatchSEOAnalyzer
 from database import init_db, save_analysis, get_analysis_history
 from task_manager import task_manager, start_analysis_task
 from keep_alive import start_keep_alive, stop_keep_alive
+from template_helpers import template_globals
 
 # 配置日志
 logging.basicConfig(
@@ -44,6 +45,9 @@ app = FastAPI(
 # 静态文件和模板
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
+
+# 添加模板助手函数
+templates.env.globals.update(template_globals)
 
 # 初始化数据库
 init_db()
@@ -122,8 +126,17 @@ async def analyze_url(
     batch_analyzer = BatchSEOAnalyzer(use_ai=use_ai)
     
     try:
-        # 执行批量分析
-        analysis_results = await batch_analyzer.analyze_multiple(urls)
+        # 执行批量分析 - 添加超时保护
+        import asyncio
+        
+        # 设置总体超时时间 (每个URL最多3分钟)
+        total_timeout = min(180 * len(urls), 900)  # 最多15分钟
+        logger.info(f"设置分析超时: {total_timeout}秒")
+        
+        analysis_results = await asyncio.wait_for(
+            batch_analyzer.analyze_multiple(urls),
+            timeout=total_timeout
+        )
         
         # 处理结果并保存到数据库
         for i, result in enumerate(analysis_results):
@@ -169,6 +182,13 @@ async def analyze_url(
                     "status": "success"
                 })
                 
+    except asyncio.TimeoutError:
+        logger.error(f"分析超时: {total_timeout}秒")
+        results.append({
+            "url": url,
+            "error": f"分析超时 ({total_timeout}秒)，请尝试分析更简单的网站或稍后重试",
+            "status": "timeout"
+        })
     except Exception as e:
         logger.error(f"批量分析失败: {str(e)}", exc_info=True)
         results.append({
@@ -178,7 +198,7 @@ async def analyze_url(
         })
     
     logger.info("所有URL分析完成")
-    return templates.TemplateResponse("results.html", {
+    return templates.TemplateResponse("results_safe.html", {
         "request": request,
         "results": results
     })
