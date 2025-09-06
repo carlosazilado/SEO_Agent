@@ -42,6 +42,8 @@ body {
 .score-number {
     font-size: 2.5rem;
     font-weight: bold;
+    font-style: normal;
+    font-family: 'Arial', 'Helvetica', sans-serif;
 }
 
 .score-number.excellent {
@@ -237,7 +239,9 @@ body {
 .circular-progress .percentage {
     font-size: 8px;
     font-weight: bold;
+    font-style: normal;
     fill: #333;
     text-anchor: middle;
     dominant-baseline: middle;
+    font-family: 'Arial', 'Helvetica', sans-serif;
 }

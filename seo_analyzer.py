@@ -206,3 +206,34 @@ class BatchSEOAnalyzer:
         print(f"\n✅ 批量分析完成！成功: {success_count}/{len(urls)}")
         
         return results
+
+
+def batch_analyze_urls(urls: List[str], use_ai=True) -> List[Dict[str, Any]]:
+    """
+    同步批量分析URL接口
+    为了兼容现有的调用方式
+    """
+    analyzer = BatchSEOAnalyzer(use_ai=use_ai)
+    
+    # 运行异步分析
+    try:
+        # 创建新的事件循环（如果当前没有运行的循环）
+        try:
+            loop = asyncio.get_running_loop()
+            # 如果已经有运行的事件循环，使用 run_in_executor
+            import concurrent.futures
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                future = executor.submit(asyncio.run, analyzer.analyze_multiple(urls))
+                return future.result()
+        except RuntimeError:
+            # 没有运行的事件循环，直接运行
+            return asyncio.run(analyzer.analyze_multiple(urls))
+    except Exception as e:
+        print(f"❌ 批量分析失败: {e}")
+        return [{
+            "url": url,
+            "status": "error",
+            "result": None,
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        } for url in urls]
