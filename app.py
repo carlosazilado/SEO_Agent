@@ -10,12 +10,16 @@ from pathlib import Path
 import uuid
 import os
 from datetime import datetime
+from dotenv import load_dotenv
+
+# 加载环境变量
+load_dotenv()
 import logging
 import traceback
 from typing import List, Optional
 
 # 导入SEO分析器
-from seo_analyzer import EnhancedSEOAgent, BatchSEOAnalyzer
+from seo_analyzer import EnhancedSEOAnalyzer, BatchSEOAnalyzer
 from database import init_db, save_analysis, get_analysis_history
 
 # 配置日志
@@ -63,10 +67,6 @@ async def home(request: Request):
     """首页"""
     return templates.TemplateResponse("index.html", {"request": request})
 
-@app.get("/batch", response_class=HTMLResponse)
-async def batch_page(request: Request):
-    """批量处理页面"""
-    return templates.TemplateResponse("batch.html", {"request": request})
 
 @app.post("/analyze")
 async def analyze_url(
@@ -89,33 +89,53 @@ async def analyze_url(
     results = []
     
     # 使用批量分析器
-    batch_analyzer = BatchSEOAnalyzer(AI_CONFIG)
+    batch_analyzer = BatchSEOAnalyzer(use_ai=use_ai)
     
     try:
         # 执行批量分析
-        analysis_results = await batch_analyzer.analyze_batch(urls)
+        analysis_results = await batch_analyzer.analyze_multiple(urls)
         
         # 处理结果并保存到数据库
         for i, result in enumerate(analysis_results):
             target_url = urls[i]
             
-            if result.get('status') == 'failed':
+            if result.get('status') == 'error':
                 results.append({
                     "url": target_url,
                     "error": result.get('error', '分析失败'),
                     "status": "error"
                 })
             else:
+                # 从批量分析结果中提取实际的分析数据
+                actual_result = result.get('result', {})
+                
                 # 保存到数据库
                 analysis_id = str(uuid.uuid4())
-                save_analysis(analysis_id, target_url, result)
                 
-                logger.info(f"分析完成: {target_url}, SEO评分: {result.get('seo_score', 0)}")
+                # 修正评分获取逻辑
+                seo_score = actual_result.get('overall_score', 0)
+                if seo_score == 0:
+                    # 尝试从summary中获取
+                    seo_score = actual_result.get('summary', {}).get('overall_score', 0)
+                
+                # 调试信息
+                logger.info(f"调试 - result类型: {type(result)}")
+                logger.info(f"调试 - result keys: {list(result.keys()) if isinstance(result, dict) else 'Not a dict'}")
+                logger.info(f"调试 - actual_result类型: {type(actual_result)}")
+                if isinstance(actual_result, dict):
+                    logger.info(f"调试 - actual_result keys: {list(actual_result.keys())}")
+                    logger.info(f"调试 - overall_score: {actual_result.get('overall_score', '未找到')}")
+                    if 'summary' in actual_result:
+                        logger.info(f"调试 - summary内容: {actual_result['summary']}")
+                
+                save_analysis(analysis_id, target_url, actual_result, seo_score, use_ai)
+                
+                logger.info(f"分析完成: {target_url}, SEO评分: {seo_score}")
                 
                 results.append({
                     "url": target_url,
                     "analysis_id": analysis_id,
-                    "result": result,
+                    "result": actual_result,
                     "status": "success"
                 })
                 
@@ -193,11 +213,11 @@ async def history(request: Request):
         
         # 计算统计信息
         total_analyses = len(history_data)
-        successful_analyses = len([h for h in history_data if json.loads(h[3]).get('seo_score')])
+        successful_analyses = len([h for h in history_data if h.get('seo_score')])
         avg_score = 0
         
         if successful_analyses > 0:
-            scores = [json.loads(h[3]).get('seo_score', 0) for h in history_data if json.loads(h[3]).get('seo_score')]
+            scores = [h.get('seo_score', 0) for h in history_data if h.get('seo_score')]
             avg_score = sum(scores) / len(scores)
         
         return templates.TemplateResponse("history.html", {
@@ -271,6 +291,37 @@ async def delete_history(analysis_id: str):
         logger.error(f"删除历史记录失败: {str(e)}", exc_info=True)
         return JSONResponse({"error": str(e)}, status_code=500)
 
+# 添加兼容性路由，匹配前端模板中的路径
+@app.get("/view_report/{analysis_id}")
+async def view_report_compat(analysis_id: str):
+    """查看报告 - 兼容路由"""
+    return await get_report(analysis_id)
+
+@app.get("/download_report/{analysis_id}")
+async def download_report_compat(analysis_id: str):
+    """下载报告 - 兼容路由"""
+    return await download_report(analysis_id)
+
+@app.post("/delete_record/{analysis_id}")
+async def delete_record_compat(analysis_id: str):
+    """删除记录 - 兼容路由"""
+    return await delete_history(analysis_id)
+
+@app.post("/clear_history")
+async def clear_history():
+    """清空历史记录"""
+    try:
+        conn = sqlite3.connect("seo_analysis.db")
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM analyses")
+        conn.commit()
+        conn.close()
+        
+        return JSONResponse({"success": True, "message": "历史记录已清空"})
+    except Exception as e:
+        logger.error(f"清空历史记录失败: {str(e)}", exc_info=True)
+        return JSONResponse({"error": str(e)}, status_code=500)
+
 @app.get("/batch-report")
 async def get_batch_report(request: Request, ids: str):
     """生成批量分析报告"""
@@ -302,7 +353,16 @@ def generate_enhanced_report(data: dict) -> str:
     """生成增强的HTML报告"""
     # 基础信息
     url = data.get('url', '')
-    seo_score = data.get('seo_score', 0)
+    
+    # 修正评分获取逻辑
+    seo_score = data.get('overall_score', 0)
+    if seo_score == 0:
+        # 尝试从summary中获取
+        seo_score = data.get('summary', {}).get('overall_score', 0)
+    if seo_score == 0:
+        # 尝试从其他可能的位置获取
+        seo_score = data.get('seo_score', 0)
+    
     timestamp = data.get('timestamp', '')
     
     # 基础数据
@@ -985,13 +1045,23 @@ if __name__ == "__main__":
     # 检查环境变量
     if not os.getenv('SILICONFLOW_API_KEY'):
         print("⚠️  警告: 未设置 SILICONFLOW_API_KEY 环境变量")
-        print("AI分析功能将不可用")
+        print("AI分析功能将不可用，将使用基础分析模式")
     
-    # 启动服务器
+    print("🚀 启动 SEO Agent Pro 服务器...")
+    
+    # 获取端口配置（支持Render等云平台）
+    port = int(os.getenv('PORT', 8000))
+    host = os.getenv('HOST', '0.0.0.0')
+    
+    print(f"🌐 访问地址: http://{host}:{port}")
+    print("📊 管理面板: http://{host}:{port}/history")
+    
+    # 启动服务器 - 生产模式
     uvicorn.run(
-        "main:app",
-        host="0.0.0.0",
-        port=8000,
-        reload=True,
-        log_level="info"
+        "app:app",
+        host=host,
+        port=port,
+        reload=False,  # 生产模式，关闭自动重载
+        log_level="info",
+        access_log=True  # 启用访问日志
     )

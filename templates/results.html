@@ -3,494 +3,176 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>分析结果 - SEO Agent</title>
-    <link rel="stylesheet" href="{{ url_for('static', path='/css/modern.css') }}">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <title>SEO分析报告 - SEO Agent Pro</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="/static/style.css" rel="stylesheet">
 </head>
 <body>
-    <!-- Navigation -->
-    <nav class="navbar">
-        <div class="nav-container">
-            <a href="/" class="nav-brand">
-                SEO Agent
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-search"></i> SEO Agent Pro
             </a>
-            <ul class="nav-links">
-                <li><a href="/" class="nav-link">首页</a></li>
-                <li><a href="/batch" class="nav-link">批量处理</a></li>
-                <li><a href="/history" class="nav-link">历史记录</a></li>
-            </ul>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/">分析</a>
+                <a class="nav-link" href="/history">历史记录</a>
+            </div>
         </div>
     </nav>
 
-    <!-- Main Content -->
-    <main class="container">
-        <div class="page-header">
-            <h1 class="page-title">
-                <i class="fas fa-chart-line"></i>
-                分析结果
-            </h1>
-            <p class="page-subtitle">查看您的网站SEO分析报告</p>
-        </div>
-
-        <!-- Results Grid -->
-        <div class="results-grid">
-            {% for result in results %}
-            <div class="result-card fade-in">
-                <div class="result-header">
-                    <div class="result-info">
-                        <div class="status-badge {% if result.status == 'success' %}status-success{% else %}status-error{% endif %}">
-                            <i class="fas {% if result.status == 'success' %}fa-check-circle{% else %}fa-times-circle{% endif %}"></i>
-                            {{ "成功" if result.status == 'success' else "失败" }}
-                        </div>
-                        <h3 class="result-title">{{ result.url }}</h3>
-                    </div>
-                    {% if result.status == 'success' %}
-                    <div class="result-actions">
-                        <a href="/report/{{ result.analysis_id }}" class="btn btn-sm" target="_blank">
-                            <i class="fas fa-eye"></i>
-                            查看报告
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-lg-12">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2>
+                        <i class="fas fa-chart-line"></i> SEO分析报告
+                    </h2>
+                    <div>
+                        <a href="/" class="btn btn-outline-primary">
+                            <i class="fas fa-plus"></i> 新分析
                         </a>
-                        <a href="/download/{{ result.analysis_id }}" class="btn btn-sm btn-secondary">
-                            <i class="fas fa-download"></i>
-                            下载
-                        </a>
+                        <button class="btn btn-success" onclick="downloadReport()">
+                            <i class="fas fa-download"></i> 下载报告
+                        </button>
                     </div>
-                    {% endif %}
                 </div>
 
-                <div class="result-body">
-                    {% if result.status == 'success' %}
-                    <div class="score-section">
-                        <div class="score-circle">
-                            <div class="score-value {% if result.result.seo_score >= 80 %}score-excellent{% elif result.result.seo_score >= 60 %}score-good{% else %}score-poor{% endif %}">
-                                {{ result.result.seo_score|default(0) }}
-                            </div>
-                            <div class="score-label">SEO评分</div>
-                        </div>
-                        <div class="score-details">
-                            <div class="chart-container">
-                                <canvas id="chart-{{ loop.index0 }}"></canvas>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="metrics-grid">
-                        <div class="metric-card">
-                            <div class="metric-icon">
-                                <i class="fas fa-heading"></i>
-                            </div>
-                            <div class="metric-content">
-                                <div class="metric-value">
-                                    {% if result.result.content_analysis and result.result.content_analysis.title %}
-                                    {{ result.result.content_analysis.title.text[:30] if result.result.content_analysis.title.text else '无标题' }}...
-                                    {% else %}
-                                    <span class="text-danger">缺失</span>
-                                    {% endif %}
-                                </div>
-                                <div class="metric-label">页面标题</div>
-                            </div>
-                        </div>
-                        <div class="metric-card">
-                            <div class="metric-icon">
-                                <i class="fas fa-align-left"></i>
-                            </div>
-                            <div class="metric-content">
-                                <div class="metric-value">
-                                    {% if result.result.content_analysis and result.result.content_analysis.meta_description %}
-                                    {{ result.result.content_analysis.meta_description.text[:30] if result.result.content_analysis.meta_description.text else '无描述' }}...
-                                    {% else %}
-                                    <span class="text-danger">缺失</span>
-                                    {% endif %}
-                                </div>
-                                <div class="metric-label">Meta描述</div>
-                            </div>
-                        </div>
-                        <div class="metric-card">
-                            <div class="metric-icon">
-                                <i class="fas fa-tachometer-alt"></i>
-                            </div>
-                            <div class="metric-content">
-                                <div class="metric-value">{{ result.result.performance.load_time|round(2)|default(0) }} ms</div>
-                                <div class="metric-label">加载时间</div>
-                            </div>
-                        </div>
-                        <div class="metric-card">
-                            <div class="metric-icon">
-                                <i class="fas fa-lightbulb"></i>
-                            </div>
-                            <div class="metric-content">
-                                <div class="metric-value">{{ result.result.recommendations|length|default(0) }}</div>
-                                <div class="metric-label">优化建议</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {% if result.result.recommendations %}
-                    <div class="recommendations-section">
-                        <h4>
-                            <i class="fas fa-exclamation-triangle"></i>
-                            主要建议
+                {% for result in results %}
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h4 class="mb-0">
+                            <a href="{{ result.url }}" target="_blank" class="text-decoration-none">{{ result.url }}</a>
                         </h4>
-                        <div class="recommendations-list">
-                            {% for rec in result.result.recommendations[:5] %}
-                            <div class="recommendation-item priority-{{ rec.priority }}">
-                                <div class="recommendation-header">
-                                    <span class="priority-badge">{{ rec.priority }}</span>
-                                    <span class="recommendation-issue">{{ rec.issue }}</span>
-                                </div>
-                                <div class="recommendation-solution">{{ rec.solution }}</div>
-                            </div>
-                            {% endfor %}
+                        <small class="text-muted">分析时间: {{ result.created_at }}</small>
+                    </div>
+                    <div class="card-body">
+                        {% if result.error %}
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle"></i> 分析失败: {{ result.error }}
                         </div>
+                        {% else %}
+                        <div class="row mb-4">
+                            <div class="col-md-4 text-center">
+                                <div class="circular-progress" data-score="{{ result.result.get('summary', {}).get('overall_score', 0) or 0 }}">
+                                    <svg viewBox="0 0 36 36">
+                                        <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                                        <path class="circle" stroke-dasharray="{{ result.result.get('summary', {}).get('overall_score', 0) or 0 }}, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                                        <text x="18" y="20.35" class="percentage">{{ result.result.get('summary', {}).get('overall_score', 0) or 0 }}</text>
+                                    </svg>
+                                </div>
+                                <h5>综合评分</h5>
+                            </div>
+                            <div class="col-md-8">
+                                <div class="row">
+                                    <div class="col-4">
+                                        <div class="text-center">
+                                            <h3 class="text-danger">{{ result.result.get('summary', {}).get('critical_issues', 0) or 0 }}</h3>
+                                            <small>严重问题</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="text-center">
+                                            <h3 class="text-warning">{{ result.result.get('summary', {}).get('warnings', 0) or 0 }}</h3>
+                                            <small>警告</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="text-center">
+                                            <h3 class="text-info">{{ result.result.get('summary', {}).get('recommendations_count', 0) or 0 }}</h3>
+                                            <small>建议数</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {% if result.result.strategy and result.result.strategy.action_plan %}
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h5><i class="fas fa-check-circle text-success"></i> AI优化建议</h5>
+                                <div class="list-group">
+                                    {% for action in result.result.strategy.action_plan[:10] %}
+                                    <div class="list-group-item">
+                                        <i class="fas fa-lightbulb text-warning"></i> {{ action }}
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <h5><i class="fas fa-info-circle text-info"></i> 基本信息</h5>
+                                <table class="table table-sm">
+                                    <tr>
+                                        <td>标题长度</td>
+                                        <td>{{ result.result.raw_data.content_analysis.tdk.title_length or 0 }} 字符</td>
+                                    </tr>
+                                    <tr>
+                                        <td>描述长度</td>
+                                        <td>{{ result.result.raw_data.content_analysis.tdk.description_length or 0 }} 字符</td>
+                                    </tr>
+                                    <tr>
+                                        <td>H1标签</td>
+                                        <td>{{ result.result.raw_data.content_analysis.headings.h1|length }} 个</td>
+                                    </tr>
+                                    <tr>
+                                        <td>图片数量</td>
+                                        <td>{{ result.result.raw_data.content_analysis.images.total }} 个</td>
+                                    </tr>
+                                    <tr>
+                                        <td>链接数量</td>
+                                        <td>{{ result.result.raw_data.content_analysis.links.internal + result.result.raw_data.content_analysis.links.external }} 个</td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if result.result.analysis %}
+                        <div class="mt-4">
+                            <h5><i class="fas fa-robot text-primary"></i> AI数据分析</h5>
+                            <div class="card">
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <h6>关键发现:</h6>
+                                            <ul>
+                                                {% if result.result.analysis.insights %}
+                                                    {% for insight in result.result.analysis.insights %}
+                                                        {% if loop.index <= 5 %}
+                                                        <li>{{ insight }}</li>
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                {% else %}
+                                                    <li>AI分析正在进行中...</li>
+                                                {% endif %}
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if result.result.html_report %}
+                        <div class="mt-4 text-center">
+                            <a href="/report/{{ result.analysis_id }}" target="_blank" class="btn btn-primary">
+                                <i class="fas fa-file-alt"></i> 查看完整AI报告
+                            </a>
+                        </div>
+                        {% endif %}
+                        {% endif %}
                     </div>
-                    {% endif %}
-                    {% else %}
-                    <div class="error-section">
-                        <i class="fas fa-exclamation-circle error-icon"></i>
-                        <h4>分析失败</h4>
-                        <p>{{ result.error }}</p>
-                    </div>
-                    {% endif %}
                 </div>
+                {% endfor %}
             </div>
-            {% endfor %}
         </div>
+    </div>
 
-        <!-- Action Buttons -->
-        <div class="action-buttons">
-            <a href="/" class="btn">
-                <i class="fas fa-plus"></i>
-                分析其他网站
-            </a>
-            <a href="/history" class="btn btn-secondary">
-                <i class="fas fa-history"></i>
-                查看历史记录
-            </a>
-        </div>
-    </main>
-
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Chart data passed from server
-        var chartData = [
-            {% for result in results %}
-            {% if result.status == 'success' %}
-            {
-                id: {{ loop.index0 }},
-                data: [
-                    {{ result.result.content_analysis.score|default(50) }},
-                    {% if result.result.technical_seo and result.result.technical_seo.mobile_friendly %}
-                        {{ result.result.technical_seo.mobile_friendly.score|default(50) }},
-                    {% else %}
-                        50,
-                    {% endif %}
-                    {{ result.result.performance.score|default(50) }},
-                    50,
-                    50
-                ]
-            }{% if not loop.last %},{% endif %}
-            {% endif %}
-            {% endfor %}
-        ];
-
-        // Initialize Charts
-        document.addEventListener('DOMContentLoaded', function() {
-            if (chartData && chartData.length > 0) {
-                chartData.forEach(function(chartInfo) {
-                    var canvas = document.getElementById('chart-' + chartInfo.id);
-                    if (canvas) {
-                        var ctx = canvas.getContext('2d');
-                        new Chart(ctx, {
-                            type: 'radar',
-                            data: {
-                                labels: ['内容质量', '技术SEO', '性能', '用户体验', '外链建设'],
-                                datasets: [{
-                                    label: 'SEO指标',
-                                    data: chartInfo.data,
-                                    backgroundColor: 'rgba(59, 130, 246, 0.2)',
-                                    borderColor: 'rgba(59, 130, 246, 1)',
-                                    borderWidth: 2,
-                                    pointBackgroundColor: 'rgba(59, 130, 246, 1)',
-                                    pointBorderColor: '#fff',
-                                    pointHoverBackgroundColor: '#fff',
-                                    pointHoverBorderColor: 'rgba(59, 130, 246, 1)'
-                                }]
-                            },
-                            options: {
-                                responsive: true,
-                                maintainAspectRatio: false,
-                                scales: {
-                                    r: {
-                                        beginAtZero: true,
-                                        max: 100,
-                                        ticks: {
-                                            stepSize: 20,
-                                            color: '#8b8d91'
-                                        },
-                                        grid: {
-                                            color: '#2a3142'
-                                        },
-                                        pointLabels: {
-                                            color: '#b0b3b8',
-                                            font: {
-                                                size: 12
-                                            }
-                                        }
-                                    }
-                                },
-                                plugins: {
-                                    legend: {
-                                        display: false
-                                    }
-                                }
-                            }
-                        });
-                    }
-                });
-            }
-        });
+        function downloadReport() {
+            window.print();
+        }
     </script>
-
-    <style>
-        /* Results Page Specific Styles */
-        .page-header {
-            text-align: center;
-            margin-bottom: 3rem;
-        }
-
-        .page-title {
-            font-size: 2.5rem;
-            margin-bottom: 0.5rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 1rem;
-        }
-
-        .page-subtitle {
-            color: var(--text-secondary);
-        }
-
-        .results-grid {
-            display: grid;
-            gap: 2rem;
-            margin-bottom: 3rem;
-        }
-
-        .result-info {
-            flex: 1;
-        }
-
-        .status-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.4rem 1rem;
-            border-radius: 20px;
-            font-size: 0.875rem;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-        }
-
-        .status-success {
-            background: rgba(16, 185, 129, 0.2);
-            color: var(--accent-success);
-        }
-
-        .status-error {
-            background: rgba(239, 68, 68, 0.2);
-            color: var(--accent-danger);
-        }
-
-        .result-title {
-            font-size: 1.25rem;
-            color: var(--text-primary);
-            word-break: break-all;
-        }
-
-        .result-actions {
-            display: flex;
-            gap: 0.5rem;
-        }
-
-        .score-section {
-            display: grid;
-            grid-template-columns: auto 1fr;
-            gap: 2rem;
-            margin-bottom: 2rem;
-            align-items: center;
-        }
-
-        .score-circle {
-            text-align: center;
-        }
-
-        .score-value {
-            width: 120px;
-            height: 120px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 2.5rem;
-            font-weight: 700;
-            margin: 0 auto 0.5rem;
-            position: relative;
-        }
-
-        .score-value::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            border-radius: 50%;
-            padding: 3px;
-            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-            -webkit-mask-composite: xor;
-            mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-            mask-composite: exclude;
-        }
-
-        .score-excellent {
-            background: linear-gradient(135deg, var(--accent-success), #34d399);
-            color: white;
-        }
-
-        .score-good {
-            background: linear-gradient(135deg, var(--accent-warning), #fbbf24);
-            color: white;
-        }
-
-        .score-poor {
-            background: linear-gradient(135deg, var(--accent-danger), #f87171);
-            color: white;
-        }
-
-        .score-label {
-            color: var(--text-secondary);
-            font-size: 0.875rem;
-        }
-
-        .chart-container {
-            height: 200px;
-        }
-
-        .recommendations-section {
-            margin-top: 2rem;
-        }
-
-        .recommendations-section h4 {
-            margin-bottom: 1rem;
-            color: var(--text-primary);
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .recommendations-list {
-            display: grid;
-            gap: 1rem;
-        }
-
-        .recommendation-item {
-            background: var(--bg-secondary);
-            padding: 1rem;
-            border-radius: 8px;
-            border-left: 4px solid;
-        }
-
-        .recommendation-item.priority-high {
-            border-left-color: var(--accent-danger);
-        }
-
-        .recommendation-item.priority-medium {
-            border-left-color: var(--accent-warning);
-        }
-
-        .recommendation-item.priority-low {
-            border-left-color: var(--accent-primary);
-        }
-
-        .recommendation-header {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            margin-bottom: 0.5rem;
-        }
-
-        .priority-badge {
-            padding: 0.2rem 0.6rem;
-            border-radius: 12px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            text-transform: uppercase;
-        }
-
-        .recommendation-item.priority-high .priority-badge {
-            background: rgba(239, 68, 68, 0.2);
-            color: var(--accent-danger);
-        }
-
-        .recommendation-item.priority-medium .priority-badge {
-            background: rgba(245, 158, 11, 0.2);
-            color: var(--accent-warning);
-        }
-
-        .recommendation-item.priority-low .priority-badge {
-            background: rgba(59, 130, 246, 0.2);
-            color: var(--accent-primary);
-        }
-
-        .recommendation-issue {
-            font-weight: 600;
-            color: var(--text-primary);
-        }
-
-        .recommendation-solution {
-            color: var(--text-secondary);
-            font-size: 0.875rem;
-        }
-
-        .error-section {
-            text-align: center;
-            padding: 3rem;
-        }
-
-        .error-icon {
-            font-size: 3rem;
-            color: var(--accent-danger);
-            margin-bottom: 1rem;
-        }
-
-        .error-section h4 {
-            color: var(--accent-danger);
-            margin-bottom: 0.5rem;
-        }
-
-        .action-buttons {
-            display: flex;
-            justify-content: center;
-            gap: 1rem;
-            flex-wrap: wrap;
-        }
-
-        @media (max-width: 768px) {
-            .score-section {
-                grid-template-columns: 1fr;
-                text-align: center;
-            }
-            
-            .result-header {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 1rem;
-            }
-            
-            .result-actions {
-                width: 100%;
-                justify-content: flex-start;
-            }
-        }
-    </style>
 </body>
 </html>

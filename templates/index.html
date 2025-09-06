@@ -3,391 +3,172 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SEO Agent - 智能网站分析工具</title>
-    <link rel="stylesheet" href="{{ url_for('static', path='/css/modern.css') }}">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <title>SEO Agent Pro - AI驱动的SEO分析系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="/static/style.css" rel="stylesheet">
+    <style>
+        .analysis-mode {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .analysis-mode:hover {
+            transform: translateY(-2px);
+        }
+        .analysis-mode.active {
+            border-color: #0d6efd;
+            background-color: #e7f3ff;
+        }
+        .batch-input {
+            display: none;
+        }
+        .batch-input.show {
+            display: block;
+        }
+    </style>
 </head>
 <body>
-    <!-- Navigation -->
-    <nav class="navbar">
-        <div class="nav-container">
-            <a href="/" class="nav-brand">
-                SEO Agent
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-search"></i> SEO Agent Pro
             </a>
-            <ul class="nav-links">
-                <li><a href="/" class="nav-link">首页</a></li>
-                <li><a href="/batch" class="nav-link">批量处理</a></li>
-                <li><a href="/history" class="nav-link">历史记录</a></li>
-            </ul>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link active" href="/">分析</a>
+                <a class="nav-link" href="/history">历史记录</a>
+            </div>
         </div>
     </nav>
 
-    <!-- Hero Section -->
-    <section class="hero">
-        <div class="container">
-            <div class="hero-content fade-in">
-                <h1 class="hero-title">
-                    <span class="gradient-text">智能SEO分析</span>
-                    <br>
-                    让您的网站排名更上一层楼
-                </h1>
-                <p class="hero-subtitle">
-                    使用AI技术深度分析网站SEO状况，提供专业的优化建议
-                </p>
-            </div>
-        </div>
-    </section>
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-lg-8 mx-auto">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h4 class="mb-0">
+                            <i class="fas fa-magic"></i> AI智能SEO分析
+                        </h4>
+                    </div>
+                    <div class="card-body">
+                        <!-- 分析模式选择 -->
+                        <div class="row mb-4">
+                            <div class="col-6">
+                                <div class="card analysis-mode active" data-mode="single">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-link fa-2x text-primary mb-2"></i>
+                                        <h6>单个URL分析</h6>
+                                        <small class="text-muted">分析单个网站的SEO状况</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="card analysis-mode" data-mode="batch">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-list fa-2x text-success mb-2"></i>
+                                        <h6>批量URL分析</h6>
+                                        <small class="text-muted">同时分析多个网站</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
-    <!-- Main Content -->
-    <main class="container">
-        <div class="card fade-in">
-            <div class="card-header">
-                <h2 class="card-title">
-                    <i class="fas fa-search"></i>
-                    开始SEO分析
-                </h2>
-                <p class="card-description">
-                    输入您要分析的网站URL，我们将为您提供详细的SEO报告
-                </p>
-            </div>
+                        <form id="analysisForm" method="post" action="/analyze">
+                            <div class="mb-3">
+                                <label for="url" class="form-label">网站URL <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-globe"></i></span>
+                                    <input type="url" class="form-control form-control-lg" id="url" name="url" required
+                                        placeholder="https://example.com">
+                                </div>
+                            </div>
 
-            <form method="post" action="/analyze" id="analyzeForm">
-                <div class="form-group">
-                    <label for="url" class="form-label">
-                        <i class="fas fa-link"></i>
-                        网站URL
-                    </label>
-                    <input 
-                        type="url" 
-                        id="url" 
-                        name="url" 
-                        class="form-control" 
-                        placeholder="https://example.com" 
-                        required
-                    >
-                </div>
+                            <!-- 批量输入框 -->
+                            <div class="mb-3 batch-input">
+                                <label for="batch_urls" class="form-label">批量URL（每行一个）</label>
+                                <textarea class="form-control" id="batch_urls" name="batch_urls" rows="4"
+                                    placeholder="https://example1.com&#10;https://example2.com&#10;https://example3.com"></textarea>
+                                <div class="form-text">可选：输入额外的URL进行批量分析</div>
+                            </div>
 
-                <!-- Advanced Options -->
-                <div class="accordion">
-                    <button type="button" class="accordion-btn" onclick="toggleAccordion()">
-                        <i class="fas fa-cog"></i>
-                        高级选项
-                        <i class="fas fa-chevron-down"></i>
-                    </button>
-                    <div class="accordion-content" id="advancedOptions">
-                        <div class="form-group">
-                            <label for="batch_urls" class="form-label">
-                                <i class="fas fa-list"></i>
-                                批量URL分析（每行一个）
-                            </label>
-                            <textarea 
-                                id="batch_urls" 
-                                name="batch_urls" 
-                                class="form-control"
-                                rows="4"
-                                placeholder="https://example1.com&#10;https://example2.com&#10;https://example3.com"
-                            ></textarea>
+                            <!-- AI分析已默认启用 -->
+                            <input type="hidden" id="use_ai" name="use_ai" value="true">
+
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary btn-lg" id="analyzeBtn">
+                                    <i class="fas fa-play"></i> 开始分析
+                                </button>
+                            </div>
+                        </form>
+
+                        <div id="loadingSpinner" class="text-center mt-4" style="display: none;">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">分析中...</span>
+                            </div>
+                            <p class="mt-2">正在分析网站，请稍候...</p>
                         </div>
                     </div>
                 </div>
 
-                <div class="btn-group">
-                    <button type="submit" class="btn" id="analyzeBtn">
-                        <i class="fas fa-rocket"></i>
-                        开始分析
-                    </button>
-                    <button type="button" class="btn btn-secondary" onclick="loadExample()">
-                        <i class="fas fa-lightbulb"></i>
-                        加载示例
-                    </button>
-                </div>
-            </form>
-        </div>
-
-        <!-- Features Section -->
-        <div class="features-section">
-            <h2 class="section-title">核心功能</h2>
-            <div class="features-grid">
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <i class="fas fa-brain"></i>
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-lightbulb"></i> 功能特点
+                        </h5>
                     </div>
-                    <h3>AI智能分析</h3>
-                    <p>使用先进的AI模型深度分析网站内容，提供智能化建议</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <i class="fas fa-tachometer-alt"></i>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="text-center">
+                                    <i class="fas fa-robot fa-3x text-primary mb-3"></i>
+                                    <h6>深度AI分析</h6>
+                                    <p class="small">由硅基流动大模型驱动，提供专业SEO建议</p>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="text-center">
+                                    <i class="fas fa-chart-line fa-3x text-success mb-3"></i>
+                                    <h6>全面数据收集</h6>
+                                    <p class="small">分析技术、内容和性能多个维度</p>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="text-center">
+                                    <i class="fas fa-file-alt fa-3x text-info mb-3"></i>
+                                    <h6>专业报告生成</h6>
+                                    <p class="small">生成详细的SEO分析报告和建议</p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <h3>性能评分</h3>
-                    <p>全面的SEO评分系统，快速了解网站优化状况</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <i class="fas fa-file-alt"></i>
-                    </div>
-                    <h3>详细报告</h3>
-                    <p>生成专业的HTML分析报告，便于分享和存档</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <i class="fas fa-history"></i>
-                    </div>
-                    <h3>历史记录</h3>
-                    <p>保存所有分析历史，追踪网站优化进度</p>
                 </div>
             </div>
-        </div>
-    </main>
-
-    <!-- Footer -->
-    <footer class="footer">
-        <div class="footer-content">
-            <div class="footer-links">
-                <a href="/" class="footer-link">首页</a>
-                <a href="/history" class="footer-link">历史记录</a>
-                <a href="https://github.com" class="footer-link" target="_blank">GitHub</a>
-            </div>
-            <p class="footer-text">
-                © 2025 SEO Agent. Powered by AI Technology
-            </p>
-        </div>
-    </footer>
-
-    <!-- Loading Overlay -->
-    <div class="loading-overlay" id="loadingOverlay">
-        <div class="loading-content">
-            <div class="loading-spinner"></div>
-            <p class="loading-text">正在分析中，请稍候...</p>
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Toggle Accordion
-        function toggleAccordion() {
-            const content = document.getElementById('advancedOptions');
-            const btn = document.querySelector('.accordion-btn');
-            content.classList.toggle('active');
-            btn.classList.toggle('active');
-        }
-
-        // Load Example
-        function loadExample() {
-            document.getElementById('url').value = 'https://www.baidu.com';
-        }
-
-        // Form Submission
-        document.getElementById('analyzeForm').addEventListener('submit', function(e) {
-            const btn = document.getElementById('analyzeBtn');
-            const overlay = document.getElementById('loadingOverlay');
-            
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 分析中...';
-            btn.disabled = true;
-            overlay.classList.add('active');
-        });
-
-        // URL Validation
-        document.getElementById('url').addEventListener('input', function(e) {
-            const url = e.target.value;
-            const btn = document.getElementById('analyzeBtn');
-            
-            if (url && isValidUrl(url)) {
-                btn.disabled = false;
-            } else {
-                btn.disabled = true;
-            }
-        });
-
-        function isValidUrl(string) {
-            try {
-                new URL(string);
-                return true;
-            } catch (_) {
-                return false;
-            }
-        }
-
-        // Add fade-in animation on scroll
-        const observerOptions = {
-            threshold: 0.1,
-            rootMargin: '0px 0px -50px 0px'
-        };
-
-        const observer = new IntersectionObserver(function(entries) {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.classList.add('fade-in');
+        // 分析模式切换
+        document.querySelectorAll('.analysis-mode').forEach(mode => {
+            mode.addEventListener('click', function() {
+                document.querySelectorAll('.analysis-mode').forEach(m => m.classList.remove('active'));
+                this.classList.add('active');
+                
+                const modeType = this.getAttribute('data-mode');
+                const batchInput = document.querySelector('.batch-input');
+                
+                if (modeType === 'batch') {
+                    batchInput.classList.add('show');
+                } else {
+                    batchInput.classList.remove('show');
                 }
             });
-        }, observerOptions);
+        });
 
-        document.querySelectorAll('.feature-card').forEach(card => {
-            observer.observe(card);
+        document.getElementById('analysisForm').addEventListener('submit', function() {
+            document.getElementById('analyzeBtn').disabled = true;
+            document.getElementById('analyzeBtn').innerHTML = '<i class="fas fa-spinner fa-spin"></i> 分析中...';
+            document.getElementById('loadingSpinner').style.display = 'block';
         });
     </script>
-
-    <style>
-        /* Additional Styles for Index Page */
-        .hero {
-            padding: 4rem 0;
-            text-align: center;
-            background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
-            margin-bottom: 3rem;
-        }
-
-        .hero-title {
-            font-size: 3rem;
-            font-weight: 800;
-            margin-bottom: 1rem;
-            line-height: 1.2;
-        }
-
-        .gradient-text {
-            background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .hero-subtitle {
-            font-size: 1.25rem;
-            color: var(--text-secondary);
-            max-width: 600px;
-            margin: 0 auto;
-        }
-
-        .card-header {
-            text-align: center;
-            margin-bottom: 2rem;
-        }
-
-        .card-title {
-            font-size: 2rem;
-            margin-bottom: 0.5rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-        }
-
-        .card-description {
-            color: var(--text-secondary);
-        }
-
-        .accordion {
-            margin: 2rem 0;
-        }
-
-        .accordion-btn {
-            width: 100%;
-            padding: 1rem;
-            background: var(--bg-secondary);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            color: var(--text-primary);
-            font-size: 1rem;
-            cursor: pointer;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            transition: all 0.3s ease;
-        }
-
-        .accordion-btn:hover {
-            background: var(--bg-hover);
-        }
-
-        .accordion-btn.active i:last-child {
-            transform: rotate(180deg);
-        }
-
-        .accordion-content {
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.3s ease;
-        }
-
-        .accordion-content.active {
-            max-height: 300px;
-            margin-top: 1rem;
-        }
-
-        .features-section {
-            margin-top: 4rem;
-        }
-
-        .section-title {
-            text-align: center;
-            font-size: 2.5rem;
-            margin-bottom: 3rem;
-            background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .features-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 2rem;
-        }
-
-        .feature-card {
-            background: var(--bg-card);
-            padding: 2rem;
-            border-radius: 12px;
-            text-align: center;
-            border: 1px solid var(--border-color);
-            transition: all 0.3s ease;
-            opacity: 0;
-        }
-
-        .feature-card:hover {
-            transform: translateY(-5px);
-            box-shadow: var(--shadow-lg);
-            border-color: var(--accent-primary);
-        }
-
-        .feature-icon {
-            width: 60px;
-            height: 60px;
-            margin: 0 auto 1rem;
-            background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-        }
-
-        .feature-card h3 {
-            font-size: 1.25rem;
-            margin-bottom: 0.5rem;
-        }
-
-        .feature-card p {
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-        }
-
-        .loading-content {
-            text-align: center;
-        }
-
-        .loading-text {
-            margin-top: 1rem;
-            color: var(--text-primary);
-        }
-
-        @media (max-width: 768px) {
-            .hero-title {
-                font-size: 2rem;
-            }
-            
-            .features-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-    </style>
 </body>
 </html>

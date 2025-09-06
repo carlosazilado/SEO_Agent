@@ -1,0 +1,243 @@
+/* 自定义样式 */
+body {
+    background-color: #f8f9fa;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+.navbar-brand {
+    font-weight: bold;
+    font-size: 1.5rem;
+}
+
+.feature-card {
+    padding: 1.5rem;
+    border-radius: 10px;
+    background-color: #f8f9fa;
+    transition: transform 0.2s, box-shadow 0.2s;
+    height: 100%;
+}
+
+.feature-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.feature-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+.seo-score-circle {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+    background-color: #f8f9fa;
+    border: 3px solid #dee2e6;
+}
+
+.score-number {
+    font-size: 2.5rem;
+    font-weight: bold;
+}
+
+.score-number.excellent {
+    color: #198754;
+}
+
+.score-number.good {
+    color: #ffc107;
+}
+
+.score-number.poor {
+    color: #dc3545;
+}
+
+.card {
+    border: none;
+    border-radius: 15px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+}
+
+.card-header {
+    background-color: transparent;
+    border-bottom: 1px solid rgba(0,0,0,0.1);
+}
+
+.btn {
+    border-radius: 8px;
+    padding: 0.5rem 1.5rem;
+    font-weight: 500;
+}
+
+.btn-primary {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+
+.btn-primary:hover {
+    background-color: #0b5ed7;
+    border-color: #0a58ca;
+}
+
+.form-control {
+    border-radius: 8px;
+    border: 1px solid #ced4da;
+    padding: 0.75rem 1rem;
+}
+
+.form-control:focus {
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+.input-group-text {
+    border-radius: 8px 0 0 8px;
+}
+
+.alert {
+    border: none;
+    border-radius: 10px;
+}
+
+.table {
+    margin-bottom: 0;
+}
+
+.table thead th {
+    border-bottom: 2px solid #dee2e6;
+    font-weight: 600;
+    color: #495057;
+}
+
+.badge {
+    padding: 0.35em 0.65em;
+    font-weight: 500;
+}
+
+/* 加载动画 */
+.spinner-border-sm {
+    width: 1rem;
+    height: 1rem;
+    border-width: 0.15em;
+}
+
+/* 响应式优化 */
+@media (max-width: 768px) {
+    .container {
+        padding-left: 15px;
+        padding-right: 15px;
+    }
+    
+    .feature-card {
+        margin-bottom: 1rem;
+    }
+    
+    .seo-score-circle {
+        width: 100px;
+        height: 100px;
+    }
+    
+    .score-number {
+        font-size: 2rem;
+    }
+}
+
+/* 动画效果 */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.card {
+    animation: fadeIn 0.5s ease-out;
+}
+
+/* 自定义滚动条 */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+/* 圆形进度条样式 */
+.circular-progress {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    margin: 0 auto;
+}
+
+.circular-progress svg {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+}
+
+.circular-progress .circle-bg {
+    fill: none;
+    stroke: #e6e6e6;
+    stroke-width: 2.8;
+}
+
+.circular-progress .circle {
+    fill: none;
+    stroke-width: 2.8;
+    stroke-linecap: round;
+    transition: stroke-dasharray 1s ease-in-out;
+}
+
+.circular-progress[data-score="0"] .circle,
+.circular-progress[data-score=""] .circle {
+    stroke: #dc3545; /* 红色 - 差 */
+}
+
+.circular-progress .circle {
+    stroke: #28a745; /* 绿色 - 好 */
+}
+
+.circular-progress[data-score*="1"] .circle,
+.circular-progress[data-score*="2"] .circle,
+.circular-progress[data-score*="3"] .circle,
+.circular-progress[data-score*="4"] .circle {
+    stroke: #dc3545; /* 红色 - 差 */
+}
+
+.circular-progress[data-score*="5"] .circle,
+.circular-progress[data-score*="6"] .circle {
+    stroke: #ffc107; /* 黄色 - 中等 */
+}
+
+.circular-progress[data-score*="7"] .circle,
+.circular-progress[data-score*="8"] .circle,
+.circular-progress[data-score*="9"] .circle {
+    stroke: #28a745; /* 绿色 - 好 */
+}
+
+.circular-progress .percentage {
+    font-size: 8px;
+    font-weight: bold;
+    fill: #333;
+    text-anchor: middle;
+    dominant-baseline: middle;
+}

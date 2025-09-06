@@ -1,0 +1,30 @@
+# Render.com 部署配置
+# SEO Agent Pro - 智能SEO分析系统
+
+# 构建命令：./build.sh
+# 启动命令：python app.py
+
+# 环境变量设置（在Render控制台设置）:
+# SILICONFLOW_API_KEY=your_api_key_here
+# PYTHON_VERSION=3.11.0
+
+# 服务配置
+# 服务类型：Web Service
+# 构建命令：./build.sh  
+# 启动命令：python app.py
+# 端口：8000（自动检测）
+# 实例类型：Free tier 或 Starter（$7/月）
+
+# 特性支持：
+# ✅ Python 3.11+
+# ✅ Playwright支持
+# ✅ 持久化存储（SQLite）
+# ✅ 环境变量管理
+# ✅ HTTPS自动配置
+# ✅ 自定义域名支持
+
+# 注意事项：
+# 1. Free tier有每月750小时限制
+# 2. 15分钟无活动后自动休眠
+# 3. 第一次请求可能需要30秒启动
+# 4. 数据库文件在重启后保持（Starter tier）

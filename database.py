@@ -14,7 +14,8 @@ def init_db():
             timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
             analysis_result TEXT NOT NULL,
             status TEXT DEFAULT 'completed',
-            seo_score INTEGER DEFAULT 0
+            seo_score INTEGER DEFAULT 0,
+            use_ai BOOLEAN DEFAULT 1
         )
     """)
     
@@ -28,21 +29,23 @@ def init_db():
     if 'seo_score' not in columns:
         cursor.execute("ALTER TABLE analyses ADD COLUMN seo_score INTEGER DEFAULT 0")
     
+    if 'use_ai' not in columns:
+        cursor.execute("ALTER TABLE analyses ADD COLUMN use_ai BOOLEAN DEFAULT 1")
+    
     conn.commit()
     conn.close()
 
-def save_analysis(analysis_id: str, url: str, result: dict):
+def save_analysis(analysis_id: str, url: str, result: dict, seo_score: int = 0, use_ai: bool = True):
     """保存分析结果"""
     conn = sqlite3.connect("seo_analysis.db")
     cursor = conn.cursor()
     
     status = 'completed' if 'error' not in result else 'error'
-    seo_score = result.get('seo_score', 0)
     
     cursor.execute("""
-        INSERT INTO analyses (id, url, analysis_result, status, seo_score)
-        VALUES (?, ?, ?, ?, ?)
-    """, (analysis_id, url, json.dumps(result, ensure_ascii=False), status, seo_score))
+        INSERT INTO analyses (id, url, analysis_result, status, seo_score, use_ai)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (analysis_id, url, json.dumps(result, ensure_ascii=False), status, seo_score, use_ai))
     
     conn.commit()
     conn.close()
@@ -53,7 +56,7 @@ def get_analysis_history(limit: int = 50):
     cursor = conn.cursor()
     
     cursor.execute("""
-        SELECT id, url, timestamp, status, seo_score
+        SELECT id, url, timestamp, analysis_result, status, seo_score, use_ai
         FROM analyses
         ORDER BY timestamp DESC
         LIMIT ?
@@ -67,8 +70,10 @@ def get_analysis_history(limit: int = 50):
             "id": r[0], 
             "url": r[1], 
             "timestamp": r[2],
-            "status": r[3],
-            "seo_score": r[4]
+            "analysis_result": r[3],
+            "status": r[4],
+            "seo_score": r[5],
+            "use_ai": bool(r[6])
         } 
         for r in results
     ]
