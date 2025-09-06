@@ -1,0 +1,33 @@
+{
+  "name": "seo-agent-pro",
+  "version": 2,
+  "builds": [
+    {
+      "src": "app.py",
+      "use": "@vercel/python"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/static/(.*)",
+      "dest": "/static/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "app.py"
+    }
+  ],
+  "env": {
+    "SILICONFLOW_API_KEY": "@siliconflow_api_key"
+  },
+  "build": {
+    "env": {
+      "PYTHONPATH": "$PYTHONPATH:/opt/src"
+    }
+  },
+  "functions": {
+    "app.py": {
+      "runtime": "python3.9"
+    }
+  }
+}
