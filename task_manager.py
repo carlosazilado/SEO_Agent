@@ -5,6 +5,7 @@
 
 import asyncio
 import uuid
+import os
 from datetime import datetime
 from typing import Dict, Any, Optional
 import logging
@@ -40,6 +41,53 @@ class TaskManager:
     def __init__(self):
         self.tasks: Dict[str, AnalysisTask] = {}
         self.max_tasks = 50  # 最多保存50个任务
+        self.task_file = "task_backup.json"  # 任务备份文件
+        self._load_tasks()  # 启动时加载任务
+    
+    def _save_tasks(self):
+        """保存任务到文件"""
+        try:
+            tasks_data = {}
+            for task_id, task in self.tasks.items():
+                tasks_data[task_id] = {
+                    'id': task.id,
+                    'url': task.url,
+                    'status': task.status.value,
+                    'progress': task.progress,
+                    'current_step': task.current_step,
+                    'created_at': task.created_at.isoformat() if task.created_at else None,
+                    'error': task.error
+                }
+            
+            with open(self.task_file, 'w', encoding='utf-8') as f:
+                json.dump(tasks_data, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            logger.error(f"保存任务失败: {e}")
+    
+    def _load_tasks(self):
+        """从文件加载任务"""
+        try:
+            if os.path.exists(self.task_file):
+                with open(self.task_file, 'r', encoding='utf-8') as f:
+                    tasks_data = json.load(f)
+                
+                for task_id, data in tasks_data.items():
+                    task = AnalysisTask(
+                        id=data['id'],
+                        url=data['url'],
+                        status=TaskStatus(data['status']),
+                        progress=data['progress'],
+                        current_step=data['current_step'],
+                        error=data.get('error')
+                    )
+                    if data.get('created_at'):
+                        task.created_at = datetime.fromisoformat(data['created_at'])
+                    
+                    self.tasks[task_id] = task
+                
+                logger.info(f"已恢复 {len(self.tasks)} 个任务")
+        except Exception as e:
+            logger.error(f"加载任务失败: {e}")
     
     def create_task(self, url: str) -> str:
         """创建新的分析任务"""
@@ -53,6 +101,7 @@ class TaskManager:
         )
         
         self.tasks[task_id] = task
+        self._save_tasks()  # 保存任务状态
         self._cleanup_old_tasks()
         
         logger.info(f"创建分析任务: {task_id} for URL: {url}")

@@ -22,6 +22,7 @@ from typing import List, Optional
 from seo_analyzer import EnhancedSEOAnalyzer, BatchSEOAnalyzer
 from database import init_db, save_analysis, get_analysis_history
 from task_manager import task_manager, start_analysis_task
+from keep_alive import start_keep_alive, stop_keep_alive
 
 # 配置日志
 logging.basicConfig(
@@ -62,6 +63,34 @@ async def global_exception_handler(request: Request, exc: Exception):
         status_code=500,
         content={"error": "服务器内部错误", "message": str(exc)}
     )
+
+# 应用生命周期事件
+@app.on_event("startup")
+async def startup_event():
+    """应用启动时执行"""
+    logger.info("🚀 SEO Agent Pro 启动中...")
+    # 启动保活服务
+    await start_keep_alive()
+    logger.info("✅ 应用启动完成")
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """应用关闭时执行"""
+    logger.info("🔄 SEO Agent Pro 正在关闭...")
+    # 停止保活服务
+    stop_keep_alive()
+    logger.info("✅ 应用关闭完成")
+
+# 健康检查端点
+@app.get("/health")
+async def health_check():
+    """健康检查端点"""
+    return {
+        "status": "healthy",
+        "timestamp": datetime.now().isoformat(),
+        "service": "SEO Agent Pro",
+        "version": "2.0.0"
+    }
 
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
