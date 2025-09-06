@@ -93,6 +93,25 @@
                             <!-- AI分析已默认启用 -->
                             <input type="hidden" id="use_ai" name="use_ai" value="true">
 
+                            <!-- 分析模式选择 -->
+                            <div class="mb-3">
+                                <label class="form-label">分析模式</label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="analysis_mode" id="sync_mode" value="sync" checked>
+                                    <label class="form-check-label" for="sync_mode">
+                                        <i class="fas fa-bolt text-warning"></i> 快速分析
+                                        <small class="text-muted d-block">立即获取结果，适合单个URL</small>
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="analysis_mode" id="async_mode" value="async">
+                                    <label class="form-check-label" for="async_mode">
+                                        <i class="fas fa-clock text-info"></i> 后台分析
+                                        <small class="text-muted d-block">后台处理，可查看实时进度，分析期间可浏览其他页面</small>
+                                    </label>
+                                </div>
+                            </div>
+
                             <div class="d-grid">
                                 <button type="submit" class="btn btn-primary btn-lg" id="analyzeBtn">
                                     <i class="fas fa-play"></i> 开始分析
@@ -147,27 +166,79 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // 分析模式切换
-        document.querySelectorAll('.analysis-mode').forEach(mode => {
-            mode.addEventListener('click', function() {
-                document.querySelectorAll('.analysis-mode').forEach(m => m.classList.remove('active'));
-                this.classList.add('active');
-                
-                const modeType = this.getAttribute('data-mode');
-                const batchInput = document.querySelector('.batch-input');
-                
-                if (modeType === 'batch') {
-                    batchInput.classList.add('show');
-                } else {
-                    batchInput.classList.remove('show');
-                }
-            });
-        });
-
-        document.getElementById('analysisForm').addEventListener('submit', function() {
+        // 表单提交处理
+        document.getElementById('analysisForm').addEventListener('submit', async function(e) {
+            const analysisMode = document.querySelector('input[name="analysis_mode"]:checked').value;
+            const url = document.getElementById('url').value;
+            const batchUrls = document.getElementById('batch_urls').value;
+            
+            // 如果是异步模式且只有单个URL，使用异步分析
+            if (analysisMode === 'async' && !batchUrls.trim()) {
+                e.preventDefault();
+                startAsyncAnalysis(url);
+                return;
+            }
+            
+            // 否则使用原来的同步分析
             document.getElementById('analyzeBtn').disabled = true;
             document.getElementById('analyzeBtn').innerHTML = '<i class="fas fa-spinner fa-spin"></i> 分析中...';
             document.getElementById('loadingSpinner').style.display = 'block';
+        });
+        
+        async function startAsyncAnalysis(url) {
+            try {
+                // 显示加载状态
+                document.getElementById('analyzeBtn').disabled = true;
+                document.getElementById('analyzeBtn').innerHTML = '<i class="fas fa-spinner fa-spin"></i> 启动分析...';
+                document.getElementById('loadingSpinner').style.display = 'block';
+                
+                // 创建FormData
+                const formData = new FormData();
+                formData.append('url', url);
+                
+                // 发送异步分析请求
+                const response = await fetch('/analyze/async', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // 跳转到进度页面
+                    window.location.href = `/progress?task_id=${data.task_id}`;
+                } else {
+                    throw new Error(data.message || '启动分析失败');
+                }
+                
+            } catch (error) {
+                alert('启动分析失败: ' + error.message);
+                console.error('异步分析启动失败:', error);
+                
+                // 恢复按钮状态
+                document.getElementById('analyzeBtn').disabled = false;
+                document.getElementById('analyzeBtn').innerHTML = '<i class="fas fa-play"></i> 开始分析';
+                document.getElementById('loadingSpinner').style.display = 'none';
+            }
+        }
+        
+        // 分析模式切换提示
+        document.querySelectorAll('input[name="analysis_mode"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                const batchInput = document.querySelector('.batch-input');
+                const analyzeBtn = document.getElementById('analyzeBtn');
+                
+                if (this.value === 'async') {
+                    analyzeBtn.innerHTML = '<i class="fas fa-clock"></i> 后台分析';
+                    // 异步模式下隐藏批量输入
+                    batchInput.style.opacity = '0.5';
+                    document.getElementById('batch_urls').disabled = true;
+                } else {
+                    analyzeBtn.innerHTML = '<i class="fas fa-play"></i> 开始分析';
+                    batchInput.style.opacity = '1';
+                    document.getElementById('batch_urls').disabled = false;
+                }
+            });
         });
     </script>
 </body>

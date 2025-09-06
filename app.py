@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request, Form, UploadFile, File
+from fastapi import FastAPI, Request, Form, UploadFile, File, BackgroundTasks
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, FileResponse, JSONResponse
@@ -21,6 +21,7 @@ from typing import List, Optional
 # 导入SEO分析器
 from seo_analyzer import EnhancedSEOAnalyzer, BatchSEOAnalyzer
 from database import init_db, save_analysis, get_analysis_history
+from task_manager import task_manager, start_analysis_task
 
 # 配置日志
 logging.basicConfig(
@@ -238,6 +239,83 @@ async def history(request: Request):
             "stats": {"total": 0, "successful": 0, "failed": 0, "avg_score": 0},
             "error": str(e)
         })
+
+# ============ 新增异步分析端点 ============
+
+@app.post("/analyze/async")
+async def analyze_url_async(url: str = Form(...)):
+    """启动异步URL分析"""
+    try:
+        # 创建异步分析任务
+        task_id = start_analysis_task(url)
+        
+        return JSONResponse(content={
+            "task_id": task_id,
+            "message": "分析任务已启动",
+            "status": "started"
+        })
+    except Exception as e:
+        logger.error(f"启动异步分析失败: {str(e)}", exc_info=True)
+        return JSONResponse(
+            status_code=500,
+            content={"error": "启动分析失败", "message": str(e)}
+        )
+
+@app.get("/task/{task_id}/status")
+async def get_task_status(task_id: str):
+    """获取任务状态和进度"""
+    task_dict = task_manager.get_task_dict(task_id)
+    
+    if not task_dict:
+        return JSONResponse(
+            status_code=404,
+            content={"error": "Task not found"}
+        )
+    
+    return JSONResponse(content=task_dict)
+
+@app.get("/progress", response_class=HTMLResponse)
+async def progress_page(request: Request):
+    """进度页面"""
+    return templates.TemplateResponse("progress.html", {"request": request})
+
+@app.get("/task/{task_id}/result")
+async def get_task_result(task_id: str):
+    """获取完成的任务结果"""
+    task = task_manager.get_task(task_id)
+    
+    if not task:
+        return JSONResponse(
+            status_code=404,
+            content={"error": "Task not found"}
+        )
+    
+    if task.status.value != "completed":
+        return JSONResponse(
+            status_code=400,
+            content={
+                "error": "Task not completed",
+                "status": task.status.value,
+                "progress": task.progress
+            }
+        )
+    
+    # 保存结果到数据库
+    if task.result:
+        analysis_id = str(uuid.uuid4())
+        seo_score = task.result.get('overall_score', 0)
+        
+        try:
+            save_analysis(analysis_id, task.url, task.result, seo_score, True)
+            logger.info(f"异步分析结果已保存: {task.url}, 评分: {seo_score}")
+        except Exception as e:
+            logger.error(f"保存异步分析结果失败: {str(e)}")
+    
+    return JSONResponse(content={
+        "task_id": task_id,
+        "result": task.result,
+        "analysis_id": analysis_id if task.result else None
+    })
 
 @app.get("/api/stats")
 async def get_stats():
