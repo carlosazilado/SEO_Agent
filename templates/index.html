@@ -172,6 +172,13 @@
             const url = document.getElementById('url').value;
             const batchUrls = document.getElementById('batch_urls').value;
             
+            // 防止重复提交
+            const analyzeBtn = document.getElementById('analyzeBtn');
+            if (analyzeBtn.disabled) {
+                e.preventDefault();
+                return;
+            }
+            
             // 如果是异步模式且只有单个URL，使用异步分析
             if (analysisMode === 'async' && !batchUrls.trim()) {
                 e.preventDefault();
@@ -180,16 +187,25 @@
             }
             
             // 否则使用原来的同步分析
-            document.getElementById('analyzeBtn').disabled = true;
-            document.getElementById('analyzeBtn').innerHTML = '<i class="fas fa-spinner fa-spin"></i> 分析中...';
+            analyzeBtn.disabled = true;
+            analyzeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 分析中...';
             document.getElementById('loadingSpinner').style.display = 'block';
         });
         
+        let isAnalyzing = false; // 防止重复提交的标志
+        
         async function startAsyncAnalysis(url) {
+            if (isAnalyzing) {
+                return; // 如果正在分析，直接返回
+            }
+            
             try {
+                isAnalyzing = true; // 设置分析中标志
+                
                 // 显示加载状态
-                document.getElementById('analyzeBtn').disabled = true;
-                document.getElementById('analyzeBtn').innerHTML = '<i class="fas fa-spinner fa-spin"></i> 启动分析...';
+                const analyzeBtn = document.getElementById('analyzeBtn');
+                analyzeBtn.disabled = true;
+                analyzeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 启动分析...';
                 document.getElementById('loadingSpinner').style.display = 'block';
                 
                 // 创建FormData
@@ -216,9 +232,11 @@
                 console.error('异步分析启动失败:', error);
                 
                 // 恢复按钮状态
-                document.getElementById('analyzeBtn').disabled = false;
-                document.getElementById('analyzeBtn').innerHTML = '<i class="fas fa-play"></i> 开始分析';
+                const analyzeBtn = document.getElementById('analyzeBtn');
+                analyzeBtn.disabled = false;
+                analyzeBtn.innerHTML = '<i class="fas fa-clock"></i> 后台分析';
                 document.getElementById('loadingSpinner').style.display = 'none';
+                isAnalyzing = false; // 重置分析标志
             }
         }
         

@@ -329,16 +329,22 @@ async def get_task_result(task_id: str):
             }
         )
     
-    # 保存结果到数据库
-    if task.result:
+    # 只在首次完成时保存结果到数据库
+    analysis_id = None
+    if task.result and not hasattr(task, 'analysis_id'):
         analysis_id = str(uuid.uuid4())
         seo_score = task.result.get('overall_score', 0)
         
         try:
             save_analysis(analysis_id, task.url, task.result, seo_score, True)
+            # 将analysis_id保存到task对象，避免重复保存
+            task.analysis_id = analysis_id
             logger.info(f"异步分析结果已保存: {task.url}, 评分: {seo_score}")
         except Exception as e:
             logger.error(f"保存异步分析结果失败: {str(e)}")
+    else:
+        # 使用已保存的analysis_id
+        analysis_id = getattr(task, 'analysis_id', None)
     
     return JSONResponse(content={
         "task_id": task_id,
@@ -495,8 +501,20 @@ def generate_enhanced_report(data: dict) -> str:
     global_rank = traffic_data.get('global_rank', 'N/A')
     monthly_visits = traffic_data.get('monthly_visits', 0)
     
-    # AI分析结果
-    ai_analysis = data.get('ai_analysis', {})
+    # AI分析结果 - 修正字段名称
+    ai_analysis = {}
+    
+    # 从数据中提取AI分析结果
+    if 'analysis' in data:
+        ai_analysis['analysis'] = data['analysis']
+    if 'strategy' in data:
+        ai_analysis['strategy'] = data['strategy'] 
+    if 'html_report' in data:
+        ai_analysis['html_report'] = data['html_report']
+    
+    # 如果没有AI分析数据，尝试从其他字段获取
+    if not ai_analysis and 'ai_analysis' in data:
+        ai_analysis = data['ai_analysis']
     
     # 生成HTML
     html = f"""
@@ -951,21 +969,211 @@ def generate_keyword_cloud(keyword_density: dict) -> str:
 def format_ai_analysis(ai_analysis: dict) -> str:
     """格式化AI分析结果"""
     if not ai_analysis:
-        return ''
+        return '<div class="no-ai-analysis">暂无AI分析数据</div>'
     
     html = ''
     
-    if 'data_analysis' in ai_analysis:
-        html += '<h4>📊 数据分析专家</h4>'
-        html += f'<pre>{ai_analysis["data_analysis"]}</pre>'
+    # 数据分析专家
+    if 'analysis' in ai_analysis:
+        html += '''
+        <div class="ai-section">
+            <h4><i class="fas fa-chart-line"></i> 数据分析专家</h4>
+            <div class="ai-content">
+        '''
+        
+        analysis = ai_analysis['analysis']
+        if isinstance(analysis, str):
+            # 处理字符串格式的分析
+            html += f'<div class="analysis-text">{analysis}</div>'
+        elif isinstance(analysis, dict):
+            # 处理结构化数据
+            for key, value in analysis.items():
+                if key == 'insights':
+                    html += '<div class="insights"><h5>🔍 关键洞察</h5><ul>'
+                    if isinstance(value, list):
+                        for insight in value:
+                            html += f'<li>{insight}</li>'
+                    html += '</ul></div>'
+                elif key == 'scores':
+                    html += '<div class="scores"><h5>📊 评分详情</h5><ul>'
+                    if isinstance(value, dict):
+                        for score_name, score_value in value.items():
+                            html += f'<li><strong>{score_name}:</strong> {score_value}分</li>'
+                    html += '</ul></div>'
+                elif key == 'issues':
+                    html += '<div class="issues"><h5>⚠️ 发现问题</h5><ul>'
+                    if isinstance(value, list):
+                        for issue in value:
+                            html += f'<li>{issue}</li>'
+                    html += '</ul></div>'
+        
+        html += '</div></div>'
     
-    if 'strategy_advisor' in ai_analysis:
-        html += '<h4>🎯 策略优化顾问</h4>'
-        html += f'<pre>{ai_analysis["strategy_advisor"]}</pre>'
+    # 策略顾问
+    if 'strategy' in ai_analysis:
+        html += '''
+        <div class="ai-section">
+            <h4><i class="fas fa-lightbulb"></i> 策略优化顾问</h4>
+            <div class="ai-content">
+        '''
+        
+        strategy = ai_analysis['strategy']
+        if isinstance(strategy, str):
+            html += f'<div class="strategy-text">{strategy}</div>'
+        elif isinstance(strategy, dict):
+            # 处理策略建议
+            if 'recommendations' in strategy:
+                html += '<div class="recommendations"><h5>💡 优化建议</h5><div class="rec-list">'
+                recommendations = strategy['recommendations']
+                if isinstance(recommendations, list):
+                    for i, rec in enumerate(recommendations, 1):
+                        if isinstance(rec, dict):
+                            priority = rec.get('priority', 'medium')
+                            description = rec.get('description', '')
+                            actions = rec.get('actions', [])
+                            estimated_time = rec.get('estimated_time', '')
+                            expected_effect = rec.get('expected_effect', '')
+                            
+                            html += f'''
+                            <div class="recommendation-item priority-{priority}">
+                                <div class="rec-header">
+                                    <span class="rec-number">#{i}</span>
+                                    <span class="rec-priority">{priority.upper()}</span>
+                                </div>
+                                <div class="rec-description">{description}</div>
+                                {f'<div class="rec-actions"><strong>具体行动:</strong><ul>{"".join([f"<li>{action}</li>" for action in actions])}</ul></div>' if actions else ''}
+                                {f'<div class="rec-time"><strong>预计时间:</strong> {estimated_time}</div>' if estimated_time else ''}
+                                {f'<div class="rec-effect"><strong>预期效果:</strong> {expected_effect}</div>' if expected_effect else ''}
+                            </div>
+                            '''
+                        else:
+                            html += f'<div class="recommendation-item"><div class="rec-description">{rec}</div></div>'
+                html += '</div></div>'
+            
+            if 'priority_matrix' in strategy:
+                html += '<div class="priority-matrix"><h5>📋 优先级矩阵</h5>'
+                matrix = strategy['priority_matrix']
+                if isinstance(matrix, dict):
+                    for level, items in matrix.items():
+                        html += f'<div class="priority-level"><strong>{level}:</strong> {", ".join(items) if isinstance(items, list) else items}</div>'
+                html += '</div>'
+        
+        html += '</div></div>'
     
-    if 'report_designer' in ai_analysis:
-        html += '<h4>📋 报告设计专家</h4>'
-        html += f'<pre>{ai_analysis["report_designer"]}</pre>'
+    # 报告设计师
+    if 'html_report' in ai_analysis:
+        html += '''
+        <div class="ai-section">
+            <h4><i class="fas fa-file-alt"></i> 报告设计专家</h4>
+            <div class="ai-content">
+        '''
+        
+        report_data = ai_analysis['html_report']
+        if isinstance(report_data, str):
+            html += f'<div class="report-summary">{report_data}</div>'
+        elif isinstance(report_data, dict):
+            if 'summary' in report_data:
+                html += f'<div class="report-summary"><h5>📋 报告摘要</h5><p>{report_data["summary"]}</p></div>'
+            if 'key_metrics' in report_data:
+                html += '<div class="key-metrics"><h5>📊 关键指标</h5><ul>'
+                metrics = report_data['key_metrics']
+                if isinstance(metrics, dict):
+                    for metric, value in metrics.items():
+                        html += f'<li><strong>{metric}:</strong> {value}</li>'
+                html += '</ul></div>'
+            if 'risk_assessment' in report_data:
+                html += f'<div class="risk-assessment"><h5>⚠️ 风险评估</h5><p>{report_data["risk_assessment"]}</p></div>'
+        
+        html += '</div></div>'
+    
+    # 添加AI分析样式
+    if html:
+        html = f'''
+        <style>
+        .ai-section {{
+            margin-bottom: 2rem;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            overflow: hidden;
+        }}
+        .ai-section h4 {{
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            margin: 0;
+            padding: 1rem;
+            font-size: 1.1rem;
+        }}
+        .ai-content {{
+            padding: 1.5rem;
+            background: #f9f9f9;
+        }}
+        .recommendation-item {{
+            background: white;
+            border-left: 4px solid #ddd;
+            margin-bottom: 1rem;
+            padding: 1rem;
+            border-radius: 4px;
+        }}
+        .recommendation-item.priority-high {{
+            border-left-color: #ff4757;
+        }}
+        .recommendation-item.priority-medium {{
+            border-left-color: #ffa502;
+        }}
+        .recommendation-item.priority-low {{
+            border-left-color: #2ed573;
+        }}
+        .rec-header {{
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }}
+        .rec-number {{
+            background: #667eea;
+            color: white;
+            padding: 0.2rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+        }}
+        .rec-priority {{
+            background: #f1f2f6;
+            padding: 0.2rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }}
+        .rec-description {{
+            margin-bottom: 1rem;
+            line-height: 1.6;
+        }}
+        .rec-actions ul {{
+            margin: 0.5rem 0;
+            padding-left: 1.5rem;
+        }}
+        .rec-time, .rec-effect {{
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+            color: #666;
+        }}
+        .insights ul, .scores ul, .issues ul {{
+            margin: 0.5rem 0;
+            padding-left: 1.5rem;
+        }}
+        .priority-level {{
+            margin-bottom: 0.5rem;
+            padding: 0.5rem;
+            background: white;
+            border-radius: 4px;
+        }}
+        .no-ai-analysis {{
+            text-align: center;
+            color: #666;
+            font-style: italic;
+            padding: 2rem;
+        }}
+        </style>
+        ''' + html
     
     return html
 
